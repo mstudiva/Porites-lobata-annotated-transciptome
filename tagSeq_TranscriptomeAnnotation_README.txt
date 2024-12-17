@@ -1,4 +1,4 @@
-# Porites lobata Transcriptome Annotation, version December 7, 2024
+# Porites lobata Transcriptome Annotation, version December 16, 2024
 # Created by Misha Matz (matz@utexas.edu), modified by Michael Studivan (studivanms@gmail.com) for use on FAU's HPC (KoKo)
 
 
@@ -51,7 +51,8 @@ cd annotate
 https://doi.org/10.1186/s13059-023-02960-7
 
 # Renaming gene identifiers for ease
-sed -i 's/lcl/Plobata/' Plobata.fasta
+sed -i 's/lcl|CALNXK/Plobata/' Plobata.fasta
+sed -i 's/PLOB_/Plobata/' Plobata.fasta
 
 # transcriptome statistics
 conda activate bioperl
@@ -70,7 +71,6 @@ N50 = 1953
 0 ambiguous Mb. (0 bp, 0%)
 0 Mb of Ns. (0 bp, 0%)
 -------------------------
-
 
 
 #------------------------------
@@ -104,9 +104,27 @@ grep "Query= " subset*.br | wc -l
 cat subset*br > myblast.br
 rm subset*
 
-# Annotating with isogroups
-grep ">" Plobata.fasta | perl -pe 's/>Pseudodiploria(\d+)(\S+).+/Pseudodiploria$1$2\tPseudodiploria$1/'>Plobata_seq2iso.tab
-cat Plobata.fasta | perl -pe 's/>Pseudodiploria(\d+)(\S+)/>Pseudodiploria$1$2 gene=Pseudodiploria$1/'>Plobata_iso.fasta
+# Extracting contig and isogroup names intro a lookup table
+grep ">" Plobata.fasta | awk '{
+    header = substr($1, 2);                  # Remove the leading ">" from the first field
+    match($0, /locus_tag=([^]]+)/, gene);    # Extract the locus_tag (gene name)
+    print header "\t" gene[1];               # Print the full header and locus_tag
+}' > Plobata_seq2iso.tab
+
+# Annotating transcriptome with isogroups
+awk '{
+    if (substr($0, 1, 1) == ">") {
+        full_contig_name = substr($0, 2, index($0, "[") - 2);   # Extract the full contig name (everything after ">")
+        if (match($0, /locus_tag=([^]]+)/, locus)) {
+            isogroup = locus[1];                                # Extract the isogroup (locus_tag) from the header
+        } else {
+            isogroup = "NA";                                    # If no locus_tag is found, set it to NA
+        }
+        print ">" full_contig_name " gene=" isogroup;           # Output the new header with the full contig name and gene=isogroup
+    } else {
+        print $0;                                               # Output the sequence as is
+    }
+}' Plobata.fasta > Plobata_iso.fasta
 
 
 #-------------------------
@@ -121,7 +139,7 @@ sbatch cddd
 # GO annotation
 # updated based on Misha Matz's new GO and KOG annotation steps on github: https://github.com/z0on/emapper_to_GOMWU_KOGMWU
 
-# selecting the longest contig per isogroup (also renames using isogroups based on Plobata and Cladocopium annotations):
+# selecting the longest contig per isogroup (also renames using isogroups based on Plobata and Plobata annotations):
 fasta2SBH.pl Plobata_iso_PRO.fas >Plobata_out_PRO.fas
 
 # scp your *_out_PRO.fas file to laptop, submit it to
