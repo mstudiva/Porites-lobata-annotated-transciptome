@@ -1,4 +1,4 @@
-# Porites lobata Transcriptome Annotation, version December 16, 2024
+# Porites lobata Transcriptome Annotation, version December 17, 2024
 # Created by Misha Matz (matz@utexas.edu), modified by Michael Studivan (studivanms@gmail.com) for use on FAU's HPC (KoKo)
 
 
@@ -47,12 +47,14 @@ cd annotate
 #------------------------------
 # getting transcriptomes
 
-# Noel (2023)
-https://doi.org/10.1186/s13059-023-02960-7
+# Noel (2023) https://doi.org/10.1186/s13059-023-02960-7
+# cds from genome at https://www.ncbi.nlm.nih.gov/datasets/genome/GCA_942486035.1/
+# protein translations at https://www.genoscope.cns.fr/corals/genomes.html
 
 # Renaming gene identifiers for ease
 sed -i 's/lcl|CALNXK/Plobata/' Plobata.fasta
 sed -i 's/PLOB_/Plobata/' Plobata.fasta
+sed -i 's/Plob_/Plobata/' Plobata_pro.fasta
 
 # transcriptome statistics
 conda activate bioperl
@@ -127,31 +129,20 @@ awk '{
 }' Plobata.fasta > Plobata_iso.fasta
 
 
-#-------------------------
-# extracting coding sequences and corresponding protein translations:
-conda activate bioperl # if not active already
-echo "perl ~/bin/CDS_extractor_v2.pl Plobata_iso.fasta myblast.br allhits bridgegaps" >cds
-launcher_creator.py -j cds -n cds -l cddd -t 6:00:00 -q shortq7 -e studivanms@gmail.com
-sbatch cddd
-
-
 #------------------------------
 # GO annotation
 # updated based on Misha Matz's new GO and KOG annotation steps on github: https://github.com/z0on/emapper_to_GOMWU_KOGMWU
 
-# selecting the longest contig per isogroup (also renames using isogroups based on Plobata and Plobata annotations):
-fasta2SBH.pl Plobata_iso_PRO.fas >Plobata_out_PRO.fas
-
-# scp your *_out_PRO.fas file to laptop, submit it to
+# scp Plobata_pro.fasta to laptop, submit it to
 http://eggnog-mapper.embl.de
 cd /path/to/local/directory
-scp mstudiva@koko-login.hpc.fau.edu:~/path/to/HPC/directory/\*_out_PRO.fas .
+scp mstudiva@koko-login.hpc.fau.edu:~/path/to/HPC/directory/\*_pro.fasta .
 
 # copy link to job ID status and output file, paste it below instead of current link:
-# http://eggnog-mapper.embl.de/job_status?jobname=MM_wo5a5jlp
+# http://eggnog-mapper.embl.de/job_status?jobname=MM_y4zgt5f7
 
 # once it is done, download results to HPC:
-wget http://eggnog-mapper.embl.de/MM_wo5a5jlp/out.emapper.annotations
+wget http://eggnog-mapper.embl.de/MM_y4zgt5f7/out.emapper.annotations
 
 # GO:
 awk -F "\t" 'BEGIN {OFS="\t" }{print $1,$10 }' out.emapper.annotations | grep GO | perl -pe 's/,/;/g' >Plobata_iso2go.tab
@@ -166,7 +157,6 @@ awk -F "\t" 'BEGIN {OFS="\t" }{print $1,$8 }' out.emapper.annotations | grep -Ev
 cp ~/bin/kog_classes.txt .
 
 #  KOG classes (single-letter):
-# this doesn't appear to be working, but the below line works awk -F "\t" 'BEGIN {OFS="\t" }{print $1,$7 }' out.emapper.annotations | grep -Ev "[,#S]" >Plobata_iso2kogClass1.tab
 awk -F "\t" 'BEGIN {OFS="\t" }{print $1,$7 }' out.emapper.annotations | grep -Ev "\tNA" >Plobata_iso2kogClass1.tab
 # converting single-letter KOG classes to text understood by KOGMWU package (must have kog_classes.txt file in the same dir):
 awk 'BEGIN {FS=OFS="\t"} NR==FNR {a[$1] = $2;next} {print $1,a[$2]}' kog_classes.txt Plobata_iso2kogClass1.tab > Plobata_iso2kogClass.tab
@@ -183,10 +173,10 @@ cd /path/to/local/directory
 scp mstudiva@koko-login.hpc.fau.edu:~/path/to/HPC/directory/\*4kegg.fasta .
 # use web browser to submit 4kegg.fasta file to KEGG's KAAS server (http://www.genome.jp/kegg/kaas/)
 # select SBH method, upload nucleotide query
-https://www.genome.jp/kaas-bin/kaas_main?mode=user&id=1692993657&key=h8IrRWSR
+https://www.genome.jp/kaas-bin/kaas_main?mode=user&id=1734461287&key=FtJBMbZ3
 
 # Once it is done, download to HPC - it is named query.ko by default
-wget https://www.genome.jp/tools/kaas/files/dl/1692993657/query.ko
+wget https://www.genome.jp/tools/kaas/files/dl/1734461287/query.ko
 
 # selecting only the lines with non-missing annotation:
 cat query.ko | awk '{if ($2!="") print }' > Plobata_iso2kegg.tab

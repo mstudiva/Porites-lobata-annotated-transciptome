@@ -1,0 +1,13 @@
+
+Plobata.fasta
+-------------------------
+42872 sequences.
+1384 average length.
+63084 maximum length.
+105 minimum length.
+N50 = 1953
+59.3 Mb altogether (59326467 bp).
+0 ambiguous Mb. (0 bp, 0%)
+0 Mb of Ns. (0 bp, 0%)
+-------------------------
+
